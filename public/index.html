@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>挨拶・おすすめ チェック集計</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 13px; background: #f0f2f5; color: #222; min-height: 100vh; }
+
+/* ===== ヘッダー ===== */
+header {
+  background: #1a5276;
+  color: #fff;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+header h1 { font-size: 15px; letter-spacing: 1px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.save-status {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  color: #aed6f1;
+  transition: all 0.3s;
+}
+.save-status.saving { color: #f9e79f; background: rgba(255,235,59,0.2); }
+.save-status.saved { color: #a9dfbf; background: rgba(39,174,96,0.2); }
+.save-status.error { color: #f1948a; background: rgba(231,76,60,0.2); }
+.btn-home {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-home:hover { background: rgba(255,255,255,0.25); }
+
+/* ===== 画面切替 ===== */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ===== ホーム画面 ===== */
+#screen-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 50px);
+  padding: 40px 20px;
+}
+.home-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #1a5276;
+  margin-bottom: 8px;
+}
+.home-subtitle { color: #777; margin-bottom: 40px; font-size: 13px; }
+.role-cards {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.role-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px 40px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  min-width: 200px;
+}
+.role-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); border-color: #3498db; }
+.role-card .icon { font-size: 48px; margin-bottom: 12px; }
+.role-card .role-name { font-size: 16px; font-weight: bold; color: #1a5276; margin-bottom: 6px; }
+.role-card .role-desc { font-size: 11px; color: #888; }
+.role-card.ofc { border-top: 4px solid #2e86c1; }
+.role-card.manager { border-top: 4px solid #1e8449; }
+
+/* ===== 店舗選択 ===== */
+#screen-store-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 50px);
+  padding: 40px 20px;
+}
+.select-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1a5276;
+  margin-bottom: 8px;
+}
+.select-sub { color: #888; margin-bottom: 32px; font-size: 12px; }
+.store-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.store-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px 36px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  border-top: 4px solid #2e86c1;
+}
+.store-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+.store-card .s-icon { font-size: 36px; margin-bottom: 8px; }
+.store-card .s-name { font-size: 16px; font-weight: bold; color: #1a5276; }
+.store-card .s-count { font-size: 11px; color: #888; margin-top: 4px; }
+
+/* ===== チェック入力画面 ===== */
+#screen-check { padding: 16px; }
+.check-header {
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.check-header-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1a5276;
+  flex: 1;
+  min-width: 150px;
+}
+.check-header label { font-size: 11px; color: #777; display: block; margin-bottom: 3px; }
+.check-header input[type=text] {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 13px;
+  width: 160px;
+}
+.check-header input[type=text]:focus { outline: 2px solid #3498db; border-color: #3498db; }
+
+/* 進捗バー */
+.progress-bar-wrap {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.progress-labels { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #777; }
+.progress-labels span { font-weight: bold; color: #1a5276; }
+.progress-bar { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #2e86c1, #27ae60); border-radius: 5px; transition: width 0.5s; }
+
+/* スコア凡例 */
+.legend-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.legend-box .legend-title { font-weight: bold; color: #1a5276; font-size: 12px; margin-bottom: 8px; }
+.legend-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+.legend-section { flex: 1; min-width: 200px; }
+.legend-section h4 { font-size: 11px; color: #555; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+.legend-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 11px; }
+.legend-score { display: inline-block; width: 28px; text-align: center; font-weight: bold; border-radius: 12px; padding: 1px 4px; }
+.ls-3 { background: #d5f5e3; color: #1e8449; }
+.ls-2 { background: #d6eaf8; color: #2e86c1; }
+.ls-1 { background: #fef9e7; color: #b7770d; }
+.ls-0 { background: #f2f3f4; color: #aaa; }
+.ls-max { background: #d5f5e3; color: #1e8449; }
+
+/* テーブル */
+.table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+.check-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+.check-table thead tr:first-child th {
+  padding: 9px 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.th-base { background: #2c3e50; color: #fff; }
+.th-aisatsu { background: #1f618d; color: #fff; }
+.th-osusume { background: #0e6655; color: #fff; }
+.th-score { background: #6c3483; color: #fff; }
+
+.check-table thead tr:nth-child(2) th {
+  padding: 5px 4px;
+  text-align: center;
+  font-size: 11px;
+  border: 1px solid #ddd;
+  white-space: nowrap;
+  background: #eaf4fb;
+  color: #1f618d;
+}
+.check-table thead tr:nth-child(2) th.h-osusume { background: #e8f8f5; color: #0e6655; }
+.check-table thead tr:nth-child(2) th.h-score { background: #f5eef8; color: #6c3483; }
+
+.check-table tbody tr { transition: background 0.1s; }
+.check-table tbody tr:nth-child(even) { background: #fafbfc; }
+.check-table tbody tr:hover { background: #eaf4fc; }
+.check-table td {
+  padding: 5px 4px;
+  border: 1px solid #e8e8e8;
+  text-align: center;
+  vertical-align: middle;
+}
+.td-no { color: #aaa; font-size: 11px; width: 40px; }
+.td-name { text-align: left; padding-left: 10px; font-weight: 500; white-space: nowrap; min-width: 90px; }
+
+.check-table select {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 2px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.check-table select:focus { outline: 2px solid #3498db; }
+.check-table select.val-maru { background: #d5f5e3; color: #1e8449; font-weight: bold; }
+.check-table select.val-batu { background: #fdecea; color: #c0392b; font-weight: bold; }
+.check-table select.val-maru2 { background: #d5f5e3; color: #1e8449; font-weight: bold; }
+.check-table select.val-maru1 { background: #d6eaf8; color: #2e86c1; font-weight: bold; }
+
+.check-table input[type=date] {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 2px;
+  font-size: 11px;
+  min-width: 110px;
+}
+.check-table input[type=text].memo {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  min-width: 90px;
+}
+.check-table input:focus { outline: 2px solid #3498db; }
+
+.score-badge {
+  display: inline-block;
+  font-weight: bold;
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 50%;
+  text-align: center;
+}
+.sb-3 { background: #d5f5e3; color: #1e8449; }
+.sb-2 { background: #d6eaf8; color: #2e86c1; }
+.sb-1 { background: #fef9e7; color: #b7770d; }
+.sb-0 { background: #f2f3f4; color: #aaa; }
+.sb-none { color: #ccc; font-size: 18px; }
+
+.total-badge {
+  display: inline-block;
+  font-weight: bold;
+  font-size: 13px;
+  min-width: 36px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  text-align: center;
+}
+.tb-6 { background: #27ae60; color: #fff; }
+.tb-high { background: #2e86c1; color: #fff; }
+.tb-mid { background: #f39c12; color: #fff; }
+.tb-low { background: #e74c3c; color: #fff; }
+.tb-none { color: #ccc; }
+
+/* 集計行 */
+.sum-row td { background: #ebf5fb; font-weight: bold; border-top: 2px solid #1f618d; font-size: 12px; }
+
+/* ===== 管理者ダッシュボード ===== */
+#screen-dashboard { padding: 20px; }
+.dash-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1a5276;
+  margin-bottom: 4px;
+}
+.dash-updated { font-size: 11px; color: #aaa; margin-bottom: 20px; }
+.dash-cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.dash-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  flex: 1;
+  min-width: 280px;
+  border-top: 4px solid #2e86c1;
+}
+.dash-card-title { font-size: 14px; font-weight: bold; color: #1a5276; margin-bottom: 12px; }
+.dash-ofc { font-size: 11px; color: #888; margin-bottom: 8px; }
+.dash-period { font-size: 11px; color: #888; margin-bottom: 12px; }
+.dash-stat-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 12px; }
+.dash-stat-label { color: #666; }
+.dash-stat-val { font-weight: bold; color: #222; }
+.dash-rate-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin: 4px 0 8px; }
+.dash-rate-fill { height: 100%; border-radius: 4px; transition: width 0.6s; }
+.fill-high { background: #27ae60; }
+.fill-mid { background: #f39c12; }
+.fill-low { background: #e74c3c; }
+.rate-pct { font-weight: bold; font-size: 20px; margin-bottom: 2px; }
+.rate-high { color: #27ae60; }
+.rate-mid { color: #f39c12; }
+.rate-low { color: #e74c3c; }
+
+/* 総合テーブル */
+.dash-table-title { font-size: 14px; font-weight: bold; color: #1a5276; margin-bottom: 10px; }
+.dash-table-wrap { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+.dash-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.dash-table th { background: #1a5276; color: #fff; padding: 10px 8px; text-align: center; font-size: 12px; white-space: nowrap; }
+.dash-table td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 13px; }
+.dash-table tr:last-child td { border-bottom: none; }
+.dash-table tr:hover td { background: #eaf4fc; }
+.td-store { text-align: left; padding-left: 16px; font-weight: bold; color: #1a5276; }
+
+.btn-refresh {
+  background: #2e86c1;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.btn-refresh:hover { background: #1f618d; }
+
+/* ===== ユーティリティ ===== */
+.mt8 { margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏪 挨拶・おすすめ チェック集計</h1>
+  <div class="header-right">
+    <span id="save-status" class="save-status" style="display:none"></span>
+    <button class="btn-home" onclick="goHome()" id="btn-home" style="display:none">ホームへ戻る</button>
+  </div>
+</header>
+
+<!-- ホーム画面 -->
+<div id="screen-home" class="screen active">
+  <div class="home-title">挨拶・おすすめ チェック集計システム</div>
+  <div class="home-subtitle">あなたの役割を選択してください</div>
+  <div class="role-cards">
+    <div class="role-card ofc" onclick="goStoreSelect()">
+      <div class="icon">✏️</div>
+      <div class="role-name">チェック入力</div>
+      <div class="role-desc">担当OFC向け<br>各店舗のチェックを入力</div>
+    </div>
+    <div class="role-card manager" onclick="goDashboard()">
+      <div class="icon">📊</div>
+      <div class="role-name">管理者ダッシュボード</div>
+      <div class="role-desc">全店舗の進捗を確認<br>リアルタイム集計表示</div>
+    </div>
+  </div>
+</div>
+
+<!-- 店舗選択画面 -->
+<div id="screen-store-select" class="screen">
+  <div class="select-title">担当店舗を選択してください</div>
+  <div class="select-sub">選択した店舗のチェックシートが開きます</div>
+  <div class="store-cards">
+    <div class="store-card" onclick="loadStore('kannami')">
+      <div class="s-icon">🏪</div>
+      <div class="s-name">関南店</div>
+      <div class="s-count">対象者 15名</div>
+    </div>
+    <div class="store-card" onclick="loadStore('hanayama')">
+      <div class="s-icon">🏪</div>
+      <div class="s-name">塙山店</div>
+      <div class="s-count">対象者 21名</div>
+    </div>
+    <div class="store-card" onclick="loadStore('shimosakurai')">
+      <div class="s-icon">🏪</div>
+      <div class="s-name">下桜井店</div>
+      <div class="s-count">対象者 19名</div>
+    </div>
+  </div>
+</div>
+
+<!-- チェック入力画面 -->
+<div id="screen-check" class="screen">
+  <div class="check-header">
+    <span class="check-header-title" id="check-store-title">チェックシート</span>
+    <div>
+      <label>担当OFC名</label>
+      <input type="text" id="ofc-name" placeholder="氏名を入力" oninput="saveMeta()">
+    </div>
+    <div>
+      <label>チェック期間</label>
+      <input type="text" id="check-period" placeholder="例：2025/04/01〜04/30" style="width:180px" oninput="saveMeta()">
+    </div>
+  </div>
+
+  <!-- 進捗バー -->
+  <div class="progress-bar-wrap">
+    <div class="progress-labels">
+      <span>挨拶チェック進捗</span>
+      <span id="progress-text">0 / 0 名 (0%)</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- スコア凡例 -->
+  <div class="legend-box">
+    <div class="legend-title">📋 スコアの計算方法</div>
+    <div class="legend-grid">
+      <div class="legend-section">
+        <h4>【挨拶スコア】 ①実施を選択 → ②声の大きさを選択 → 自動計算</h4>
+        <div class="legend-row"><span class="legend-score ls-3">3点</span> 実施〇 ＋ 声の大きさ ◎（大変よい）</div>
+        <div class="legend-row"><span class="legend-score ls-2">2点</span> 実施〇 ＋ 声の大きさ 〇（よい）</div>
+        <div class="legend-row"><span class="legend-score ls-1">1点</span> 実施〇 ＋ 声の大きさ ×（聞こえない）</div>
+        <div class="legend-row"><span class="legend-score ls-0">0点</span> 実施×（挨拶なし）</div>
+      </div>
+      <div class="legend-section">
+        <h4>【おすすめスコア】 各項目〇で＋1点（合計最大3点）</h4>
+        <div class="legend-row"><span class="legend-score ls-max">+1</span> おすすめ実施 〇</div>
+        <div class="legend-row"><span class="legend-score ls-max">+1</span> レジカウンターおすすめ 〇</div>
+        <div class="legend-row"><span class="legend-score ls-max">+1</span> 店内おすすめ 〇</div>
+        <div class="legend-row" style="margin-top:6px"><strong>総合評価 = 挨拶スコア + おすすめスコア（最大 6点）</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- チェックテーブル -->
+  <div class="table-wrap">
+    <table class="check-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="th-base">番号</th>
+          <th rowspan="2" class="th-base">氏名</th>
+          <th colspan="4" class="th-aisatsu">【あいさつ】</th>
+          <th rowspan="2" class="th-score">挨拶<br>スコア</th>
+          <th colspan="4" class="th-osusume">【おすすめ】</th>
+          <th rowspan="2" class="th-score">おすすめ<br>スコア</th>
+          <th rowspan="2" class="th-score">総合<br>評価</th>
+        </tr>
+        <tr>
+          <th>①実施<br>〇/×</th>
+          <th>②声の大きさ<br>◎大変よい / 〇よい / ×聞こえない</th>
+          <th>チェック日</th>
+          <th>備考</th>
+          <th class="h-osusume">実施<br>〇/×</th>
+          <th class="h-osusume">レジ<br>〇/×</th>
+          <th class="h-osusume">店内<br>〇/×</th>
+          <th class="h-osusume">チェック日</th>
+          <th class="h-score">（自動）</th>
+          <th class="h-score">（自動）</th>
+        </tr>
+      </thead>
+      <tbody id="check-tbody"></tbody>
+      <tfoot>
+        <tr class="sum-row">
+          <td colspan="2">集計</td>
+          <td id="sum-aisatsu">—</td>
+          <td id="sum-koe">—</td>
+          <td colspan="2"></td>
+          <td id="sum-ascore">—</td>
+          <td id="sum-osusume">—</td>
+          <td id="sum-reji">—</td>
+          <td id="sum-tennai">—</td>
+          <td></td>
+          <td id="sum-oscore">—</td>
+          <td id="sum-total">—</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- 管理者ダッシュボード -->
+<div id="screen-dashboard" class="screen">
+  <div class="dash-title">📊 管理者ダッシュボード</div>
+  <div class="dash-updated" id="dash-updated">取得中...</div>
+  <button class="btn-refresh" onclick="loadDashboard()">🔄 最新データに更新</button>
+  <div class="dash-cards" id="dash-cards"></div>
+  <div class="dash-table-title">全店舗 一覧表</div>
+  <div class="dash-table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>店舗</th>
+          <th>担当OFC</th>
+          <th>対象者数</th>
+          <th>挨拶<br>チェック済</th>
+          <th>挨拶<br>実施率</th>
+          <th>声◎</th>
+          <th>声〇</th>
+          <th>おすすめ<br>チェック済</th>
+          <th>おすすめ<br>実施</th>
+          <th>レジ<br>実施</th>
+          <th>店内<br>実施</th>
+        </tr>
+      </thead>
+      <tbody id="dash-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ===== 状態管理 =====
+let currentStore = null;
+let storeData = null;
+let saveTimer = null;
+let metaTimer = null;
+
+// ===== 画面遷移 =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const isHome = id === 'screen-home';
+  document.getElementById('btn-home').style.display = isHome ? 'none' : 'inline-block';
+  document.getElementById('save-status').style.display =
+    id === 'screen-check' ? 'inline-block' : 'none';
+}
+
+function goHome() { showScreen('screen-home'); currentStore = null; storeData = null; }
+function goStoreSelect() { showScreen('screen-store-select'); }
+function goDashboard() { showScreen('screen-dashboard'); loadDashboard(); }
+
+// ===== 店舗データ読込 =====
+async function loadStore(storeKey) {
+  currentStore = storeKey;
+  showScreen('screen-check');
+
+  const storeNames = { kannami:'関南店', hanayama:'塙山店', shimosakurai:'下桜井店' };
+  document.getElementById('check-store-title').textContent =
+    `チェックシート【${storeNames[storeKey]}】`;
+
+  try {
+    const res = await fetch(`/api/store/${storeKey}`);
+    storeData = await res.json();
+    document.getElementById('ofc-name').value = storeData.meta.ofcName || '';
+    document.getElementById('check-period').value = storeData.meta.checkPeriod || '';
+    buildTable();
+    updateSummary();
+  } catch(e) {
+    alert('データの取得に失敗しました。ページを再読み込みしてください。');
+  }
+}
+
+// ===== テーブル構築 =====
+function buildTable() {
+  const tbody = document.getElementById('check-tbody');
+  tbody.innerHTML = '';
+
+  storeData.employees.forEach((emp, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-no">${emp.no}</td>
+      <td class="td-name">${emp.name}</td>
+      <td><select id="a_${i}" onchange="onSelect(${i},'aisatsu',this.value)">
+        <option value="">— 選択 —</option>
+        <option value="〇">〇（している）</option>
+        <option value="×">×（していない）</option>
+      </select></td>
+      <td><select id="k_${i}" onchange="onSelect(${i},'koe',this.value)">
+        <option value="">— 選択 —</option>
+        <option value="◎">◎ 大変よい</option>
+        <option value="〇">〇 よい</option>
+        <option value="×">× 聞こえない</option>
+      </select></td>
+      <td><input type="date" id="ad_${i}" onchange="onInput(${i},'aisatsuDate',this.value)"></td>
+      <td><input type="text" class="memo" id="am_${i}" placeholder="備考" oninput="onInput(${i},'aisatsuMemo',this.value)"></td>
+      <td id="as_${i}"><span class="sb-none">—</span></td>
+      <td><select id="o_${i}" onchange="onSelect(${i},'osusume',this.value)">
+        <option value="">— 選択 —</option>
+        <option value="〇">〇（している）</option>
+        <option value="×">×（していない）</option>
+      </select></td>
+      <td><select id="r_${i}" onchange="onSelect(${i},'reji',this.value)">
+        <option value="">— 選択 —</option>
+        <option value="〇">〇（している）</option>
+        <option value="×">×（していない）</option>
+      </select></td>
+      <td><select id="t_${i}" onchange="onSelect(${i},'tennai',this.value)">
+        <option value="">— 選択 —</option>
+        <option value="〇">〇（している）</option>
+        <option value="×">×（していない）</option>
+      </select></td>
+      <td><input type="date" id="od_${i}" onchange="onInput(${i},'osusumeDate',this.value)"></td>
+      <td id="os_${i}"><span class="sb-none">—</span></td>
+      <td id="ts_${i}"><span class="tb-none">—</span></td>
+    `;
+    tbody.appendChild(tr);
+
+    // 既存データをセット
+    setSelectValue(`a_${i}`, emp.aisatsu);
+    setSelectValue(`k_${i}`, emp.koe);
+    setSelectValue(`o_${i}`, emp.osusume);
+    setSelectValue(`r_${i}`, emp.reji);
+    setSelectValue(`t_${i}`, emp.tennai);
+    const adEl = document.getElementById(`ad_${i}`);
+    if (adEl) adEl.value = emp.aisatsuDate || '';
+    const amEl = document.getElementById(`am_${i}`);
+    if (amEl) amEl.value = emp.aisatsuMemo || '';
+    const odEl = document.getElementById(`od_${i}`);
+    if (odEl) odEl.value = emp.osusumeDate || '';
+
+    // 〇/×の場合は声プルダウンの有効/無効
+    updateKoeDisabled(i, emp.aisatsu);
+    calcScore(i);
+  });
+}
+
+function setSelectValue(id, val) {
+  const el = document.getElementById(id);
+  if (!el || !val) return;
+  el.value = val;
+  applySelectColor(el, val);
+}
+
+function applySelectColor(el, val) {
+  el.className = '';
+  if (val === '〇') el.classList.add('val-maru');
+  else if (val === '×') el.classList.add('val-batu');
+  else if (val === '◎') el.classList.add('val-maru2');
+}
+
+// ===== 入力ハンドラ =====
+function onSelect(idx, field, val) {
+  storeData.employees[idx][field] = val;
+  const elMap = { aisatsu:`a_${idx}`, koe:`k_${idx}`, osusume:`o_${idx}`, reji:`r_${idx}`, tennai:`t_${idx}` };
+  const el = document.getElementById(elMap[field]);
+  if (el) applySelectColor(el, val);
+
+  if (field === 'aisatsu') updateKoeDisabled(idx, val);
+  calcScore(idx);
+  updateSummary();
+  scheduleSave(idx);
+}
+
+function onInput(idx, field, val) {
+  storeData.employees[idx][field] = val;
+  updateSummary();
+  scheduleSave(idx);
+}
+
+function updateKoeDisabled(idx, aisatsuVal) {
+  const koeEl = document.getElementById(`k_${idx}`);
+  if (!koeEl) return;
+  if (aisatsuVal === '×') {
+    koeEl.disabled = true;
+    koeEl.value = '';
+    storeData.employees[idx].koe = '';
+    koeEl.className = '';
+  } else {
+    koeEl.disabled = false;
+  }
+}
+
+// ===== スコア計算 =====
+function calcScore(idx) {
+  const emp = storeData.employees[idx];
+  const { aisatsu, koe, osusume, reji, tennai } = emp;
+
+  // 挨拶スコア
+  let aScore = null;
+  if (aisatsu === '×') aScore = 0;
+  else if (aisatsu === '〇') {
+    if (koe === '◎') aScore = 3;
+    else if (koe === '〇') aScore = 2;
+    else if (koe === '×') aScore = 1;
+  }
+
+  // おすすめスコア
+  let oScore = null;
+  if (osusume !== '' || reji !== '' || tennai !== '') {
+    oScore = 0;
+    if (osusume === '〇') oScore += 1;
+    if (reji === '〇') oScore += 1;
+    if (tennai === '〇') oScore += 1;
+  }
+
+  // 表示
+  const asCell = document.getElementById(`as_${idx}`);
+  const osCell = document.getElementById(`os_${idx}`);
+  const tsCell = document.getElementById(`ts_${idx}`);
+
+  asCell.innerHTML = aScore !== null
+    ? `<span class="score-badge sb-${Math.min(aScore,3)}">${aScore}</span>`
+    : '<span class="sb-none">—</span>';
+
+  osCell.innerHTML = oScore !== null
+    ? `<span class="score-badge ${oScore>=2?'sb-3':oScore===1?'sb-2':'sb-0'}">${oScore}</span>`
+    : '<span class="sb-none">—</span>';
+
+  if (aScore !== null && oScore !== null) {
+    const total = aScore + oScore;
+    const cls = total === 6 ? 'tb-6' : total >= 4 ? 'tb-high' : total >= 2 ? 'tb-mid' : 'tb-low';
+    tsCell.innerHTML = `<span class="total-badge ${cls}">${total}点</span>`;
+  } else if (aScore !== null || oScore !== null) {
+    const partial = (aScore||0) + (oScore||0);
+    tsCell.innerHTML = `<span class="total-badge tb-mid">${partial}…</span>`;
+  } else {
+    tsCell.innerHTML = '<span class="tb-none">—</span>';
+  }
+}
+
+// ===== 集計行・進捗 =====
+function updateSummary() {
+  if (!storeData) return;
+  const emps = storeData.employees;
+  const n = emps.length;
+  let sumA=0, sumKoe2=0, sumKoe1=0, sumKoeBatu=0;
+  let sumO=0, sumR=0, sumT=0;
+  let sumAScore=0, sumOScore=0, sumTotal=0;
+  let aChecked=0;
+
+  emps.forEach((emp, i) => {
+    if (emp.aisatsu === '〇') sumA++;
+    if (emp.koe === '◎') sumKoe2++;
+    if (emp.koe === '〇') sumKoe1++;
+    if (emp.koe === '×') sumKoeBatu++;
+    if (emp.osusume === '〇') sumO++;
+    if (emp.reji === '〇') sumR++;
+    if (emp.tennai === '〇') sumT++;
+    if (emp.aisatsuDate) aChecked++;
+
+    // スコア集計
+    let aScore=0, oScore=0;
+    if (emp.aisatsu === '×') aScore=0;
+    else if (emp.aisatsu === '〇') {
+      if (emp.koe === '◎') aScore=3;
+      else if (emp.koe === '〇') aScore=2;
+      else if (emp.koe === '×') aScore=1;
+    }
+    if (emp.osusume === '〇') oScore++;
+    if (emp.reji === '〇') oScore++;
+    if (emp.tennai === '〇') oScore++;
+    sumAScore += aScore;
+    sumOScore += oScore;
+    sumTotal += aScore + oScore;
+  });
+
+  document.getElementById('sum-aisatsu').textContent = `実施〇: ${sumA}人`;
+  document.getElementById('sum-koe').textContent = `◎${sumKoe2} / 〇${sumKoe1} / ×${sumKoeBatu}`;
+  document.getElementById('sum-ascore').textContent = `平均${n?Math.round(sumAScore/n*10)/10:0}点`;
+  document.getElementById('sum-osusume').textContent = `実施〇: ${sumO}人`;
+  document.getElementById('sum-reji').textContent = `レジ〇: ${sumR}人`;
+  document.getElementById('sum-tennai').textContent = `店内〇: ${sumT}人`;
+  document.getElementById('sum-oscore').textContent = `平均${n?Math.round(sumOScore/n*10)/10:0}点`;
+  document.getElementById('sum-total').textContent = `平均${n?Math.round(sumTotal/n*10)/10:0}点`;
+
+  // 進捗バー
+  const pct = n > 0 ? Math.round(aChecked / n * 100) : 0;
+  document.getElementById('progress-text').textContent = `${aChecked} / ${n} 名 (${pct}%)`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ===== 自動保存 =====
+function showSaveStatus(msg, cls) {
+  const el = document.getElementById('save-status');
+  el.textContent = msg;
+  el.className = 'save-status ' + cls;
+}
+
+function scheduleSave(idx) {
+  showSaveStatus('保存中...', 'saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveEmployee(idx), 800);
+}
+
+async function saveEmployee(idx) {
+  if (!currentStore || !storeData) return;
+  const emp = storeData.employees[idx];
+  try {
+    await fetch('/api/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        store: currentStore,
+        employeeNo: emp.no,
+        fields: {
+          aisatsu: emp.aisatsu, koe: emp.koe,
+          aisatsuDate: emp.aisatsuDate, aisatsuMemo: emp.aisatsuMemo,
+          osusume: emp.osusume, reji: emp.reji, tennai: emp.tennai,
+          osusumeDate: emp.osusumeDate, osusumeMemo: emp.osusumeMemo
+        }
+      })
+    });
+    showSaveStatus('保存済 ✓', 'saved');
+    setTimeout(() => showSaveStatus('', ''), 3000);
+  } catch(e) {
+    showSaveStatus('保存エラー ✗', 'error');
+  }
+}
+
+function saveMeta() {
+  clearTimeout(metaTimer);
+  metaTimer = setTimeout(async () => {
+    if (!currentStore) return;
+    await fetch('/api/meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        store: currentStore,
+        ofcName: document.getElementById('ofc-name').value,
+        checkPeriod: document.getElementById('check-period').value
+      })
+    });
+  }, 800);
+}
+
+// ===== ダッシュボード =====
+async function loadDashboard() {
+  document.getElementById('dash-updated').textContent = '更新中...';
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    renderDashboard(data);
+    document.getElementById('dash-updated').textContent =
+      `最終更新: ${new Date().toLocaleString('ja-JP')}`;
+  } catch(e) {
+    document.getElementById('dash-updated').textContent = '取得エラー';
+  }
+}
+
+function renderDashboard(data) {
+  const storeOrder = ['kannami', 'hanayama', 'shimosakurai'];
+
+  // カード
+  const cardsEl = document.getElementById('dash-cards');
+  cardsEl.innerHTML = '';
+  storeOrder.forEach(key => {
+    const d = data[key];
+    if (!d) return;
+    const pct = d.aisatsuRate;
+    const fillCls = pct >= 80 ? 'fill-high' : pct >= 50 ? 'fill-mid' : 'fill-low';
+    const rateCls = pct >= 80 ? 'rate-high' : pct >= 50 ? 'rate-mid' : 'rate-low';
+    cardsEl.innerHTML += `
+      <div class="dash-card">
+        <div class="dash-card-title">🏪 ${d.storeName}</div>
+        ${d.ofcName ? `<div class="dash-ofc">担当OFC: ${d.ofcName}</div>` : ''}
+        ${d.checkPeriod ? `<div class="dash-period">期間: ${d.checkPeriod}</div>` : ''}
+        <div class="rate-pct ${rateCls}">${pct}%</div>
+        <div style="font-size:11px;color:#888;margin-bottom:6px">挨拶チェック実施率</div>
+        <div class="dash-rate-bar">
+          <div class="dash-rate-fill ${fillCls}" style="width:${pct}%"></div>
+        </div>
+        <div class="dash-stat-row"><span class="dash-stat-label">対象者数</span><span class="dash-stat-val">${d.total}名</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">挨拶チェック済</span><span class="dash-stat-val">${d.aisatsuChecked}名</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">声◎</span><span class="dash-stat-val">${d.koeMaru2}名</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">声〇</span><span class="dash-stat-val">${d.koeMaru1}名</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">おすすめチェック済</span><span class="dash-stat-val">${d.osusumeChecked}名</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">レジおすすめ実施</span><span class="dash-stat-val">${d.reji}名</span></div>
+        <div class="dash-stat-row"><span class="dash-stat-label">店内おすすめ実施</span><span class="dash-stat-val">${d.tennai}名</span></div>
+      </div>
+    `;
+  });
+
+  // テーブル
+  const tbody = document.getElementById('dash-tbody');
+  tbody.innerHTML = '';
+  storeOrder.forEach(key => {
+    const d = data[key];
+    if (!d) return;
+    const pct = d.aisatsuRate;
+    const rateCls = pct >= 80 ? 'rate-high' : pct >= 50 ? 'rate-mid' : 'rate-low';
+    tbody.innerHTML += `
+      <tr>
+        <td class="td-store">🏪 ${d.storeName}</td>
+        <td>${d.ofcName || '—'}</td>
+        <td>${d.total}名</td>
+        <td>${d.aisatsuChecked}名</td>
+        <td class="${rateCls}" style="font-weight:bold">${pct}%</td>
+        <td>${d.koeMaru2}名</td>
+        <td>${d.koeMaru1}名</td>
+        <td>${d.osusumeChecked}名</td>
+        <td>${d.osusumeJisshi}名</td>
+        <td>${d.reji}名</td>
+        <td>${d.tennai}名</td>
+      </tr>
+    `;
+  });
+}
+</script>
+</body>
+</html>
