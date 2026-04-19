@@ -528,6 +528,12 @@ header h1 { font-size: 15px; letter-spacing: 1px; }
 </div>
 
 <script>
+// ===== 初期化（全画面を非表示にしてホームだけ表示）=====
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.screen').forEach(s => { s.style.display = 'none'; });
+  document.getElementById('screen-home').style.display = 'flex';
+});
+
 // ===== 状態管理 =====
 let currentStore = null;
 let storeData = null;
@@ -536,8 +542,10 @@ let metaTimer = null;
 
 // ===== 画面遷移 =====
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const flexScreens = ['screen-home', 'screen-store-select'];
+  document.querySelectorAll('.screen').forEach(s => { s.style.display = 'none'; });
+  const target = document.getElementById(id);
+  target.style.display = flexScreens.includes(id) ? 'flex' : 'block';
   const isHome = id === 'screen-home';
   document.getElementById('btn-home').style.display = isHome ? 'none' : 'inline-block';
   document.getElementById('save-status').style.display =
