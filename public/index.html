@@ -534,6 +534,58 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('screen-home').style.display = 'flex';
 });
 
+// ===== 従業員マスターデータ（サーバー不要で動作）=====
+const STORE_MASTER = {
+  kannami: {
+    name: '関南店',
+    employees: [
+      {no:2,name:'泉泰子'},{no:3,name:'伊藤伝恵'},{no:11,name:'小坂亜弓'},
+      {no:16,name:'鈴木千明'},{no:28,name:'松本いずみ'},{no:80,name:'松下龍'},
+      {no:156,name:'金田美雪'},{no:168,name:'大谷修'},{no:170,name:'古澤大輔'},
+      {no:193,name:'浦田琉聖'},{no:201,name:'吉村嘉恋'},{no:220,name:'吉村嘉音'},
+      {no:221,name:'野澤玲香'},{no:226,name:'須田珠予'},{no:234,name:'柴田光江'},
+    ]
+  },
+  hanayama: {
+    name: '塙山店',
+    employees: [
+      {no:83,name:'阿部奈津子'},{no:84,name:'秋川麻衣子'},{no:88,name:'板倉博幸'},
+      {no:89,name:'小田部美香'},{no:98,name:'佐瀬敏之'},{no:105,name:'根本裕子'},
+      {no:108,name:'深沢環'},{no:147,name:'小林柊太'},{no:181,name:'長久保颯生'},
+      {no:190,name:'生田目結太'},{no:200,name:'倉森啓汰'},{no:203,name:'近藤瑠南'},
+      {no:204,name:'㑹澤桃花'},{no:205,name:'小室高世'},{no:212,name:'渡辺羚士'},
+      {no:217,name:'本間雅斗'},{no:218,name:'吉田翠'},{no:225,name:'小室莉乃'},
+      {no:232,name:'丹野久美子'},{no:233,name:'荷見蒼葉'},{no:235,name:'小林沙樹'},
+    ]
+  },
+  shimosakurai: {
+    name: '下桜井店',
+    employees: [
+      {no:9,name:'木村富江'},{no:23,name:'飛田忍'},{no:24,name:'中野真寿美'},
+      {no:26,name:'松浦勝'},{no:33,name:'山下さゆり'},{no:35,name:'渡邊恵美'},
+      {no:124,name:'狩野雄祐'},{no:129,name:'タマンドングボズクアル'},{no:160,name:'伊藤佳央'},
+      {no:167,name:'小松笑美子'},{no:185,name:'大田和純愛'},{no:207,name:'増井真弓'},
+      {no:211,name:'竹澤乃咲'},{no:224,name:'鈴木姫望'},{no:229,name:'和田麻衣'},
+      {no:231,name:'佐藤律輝'},{no:237,name:'鈴木佳代'},{no:238,name:'安藤瑠良'},
+      {no:239,name:'大和田瑠生'},
+    ]
+  }
+};
+
+function makeEmptyStoreData(storeKey) {
+  return {
+    meta: { ofcName: '', checkPeriod: '' },
+    employees: STORE_MASTER[storeKey].employees.map(emp => ({
+      no: emp.no, name: emp.name,
+      aisatsu:'', koe:'', aisatsuDate:'', aisatsuMemo:'',
+      osusume:'', reji:'', tennai:'', osusumeDate:'', osusumeMemo:'', updatedAt:''
+    }))
+  };
+}
+
+// サーバーモードかローカルモードか自動判定
+const IS_SERVER = location.protocol !== 'file:';
+
 // ===== 状態管理 =====
 let currentStore = null;
 let storeData = null;
@@ -561,20 +613,39 @@ async function loadStore(storeKey) {
   currentStore = storeKey;
   showScreen('screen-check');
 
-  const storeNames = { kannami:'関南店', hanayama:'塙山店', shimosakurai:'下桜井店' };
   document.getElementById('check-store-title').textContent =
-    `チェックシート【${storeNames[storeKey]}】`;
+    `チェックシート【${STORE_MASTER[storeKey].name}】`;
 
-  try {
-    const res = await fetch(`/api/store/${storeKey}`);
-    storeData = await res.json();
-    document.getElementById('ofc-name').value = storeData.meta.ofcName || '';
-    document.getElementById('check-period').value = storeData.meta.checkPeriod || '';
-    buildTable();
-    updateSummary();
-  } catch(e) {
-    alert('データの取得に失敗しました。ページを再読み込みしてください。');
+  if (IS_SERVER) {
+    // サーバーモード：APIから取得
+    try {
+      const res = await fetch(`/api/store/${storeKey}`);
+      storeData = await res.json();
+    } catch(e) {
+      storeData = makeEmptyStoreData(storeKey);
+    }
+  } else {
+    // ローカルモード：localStorageから取得
+    const saved = localStorage.getItem('store_' + storeKey);
+    storeData = saved ? JSON.parse(saved) : makeEmptyStoreData(storeKey);
+    // 名簿が古い場合に新しい従業員を追加
+    const masterNos = STORE_MASTER[storeKey].employees.map(e => e.no);
+    const savedNos = storeData.employees.map(e => e.no);
+    masterNos.forEach((no, i) => {
+      if (!savedNos.includes(no)) {
+        const emp = STORE_MASTER[storeKey].employees[i];
+        storeData.employees.splice(i, 0, {
+          no, name: emp.name, aisatsu:'', koe:'', aisatsuDate:'', aisatsuMemo:'',
+          osusume:'', reji:'', tennai:'', osusumeDate:'', osusumeMemo:'', updatedAt:''
+        });
+      }
+    });
   }
+
+  document.getElementById('ofc-name').value = storeData.meta.ofcName || '';
+  document.getElementById('check-period').value = storeData.meta.checkPeriod || '';
+  buildTable();
+  updateSummary();
 }
 
 // ===== テーブル構築 =====
@@ -799,9 +870,17 @@ function scheduleSave(idx) {
   saveTimer = setTimeout(() => saveEmployee(idx), 800);
 }
 
+function saveLocal() {
+  if (!currentStore || !storeData) return;
+  localStorage.setItem('store_' + currentStore, JSON.stringify(storeData));
+  showSaveStatus('保存済 ✓', 'saved');
+  setTimeout(() => showSaveStatus('', ''), 3000);
+}
+
 async function saveEmployee(idx) {
   if (!currentStore || !storeData) return;
   const emp = storeData.employees[idx];
+  if (!IS_SERVER) { saveLocal(); return; }
   try {
     await fetch('/api/update', {
       method: 'POST',
@@ -828,6 +907,7 @@ function saveMeta() {
   clearTimeout(metaTimer);
   metaTimer = setTimeout(async () => {
     if (!currentStore) return;
+    if (!IS_SERVER) { saveLocal(); return; }
     await fetch('/api/meta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -843,6 +923,32 @@ function saveMeta() {
 // ===== ダッシュボード =====
 async function loadDashboard() {
   document.getElementById('dash-updated').textContent = '更新中...';
+  if (!IS_SERVER) {
+    // ローカルモード：localStorageから集計
+    const data = {};
+    ['kannami','hanayama','shimosakurai'].forEach(key => {
+      const saved = localStorage.getItem('store_' + key);
+      const sd = saved ? JSON.parse(saved) : makeEmptyStoreData(key);
+      const emps = sd.employees;
+      const n = emps.length;
+      const aisatsuChecked = emps.filter(e => e.aisatsuDate).length;
+      data[key] = {
+        storeName: STORE_MASTER[key].name, total: n,
+        aisatsuChecked, aisatsuRate: n > 0 ? Math.round(aisatsuChecked/n*100) : 0,
+        koeMaru2: emps.filter(e=>e.koe==='◎').length,
+        koeMaru1: emps.filter(e=>e.koe==='〇').length,
+        osusumeChecked: emps.filter(e=>e.osusumeDate).length,
+        osusumeJisshi: emps.filter(e=>e.osusume==='〇').length,
+        reji: emps.filter(e=>e.reji==='〇').length,
+        tennai: emps.filter(e=>e.tennai==='〇').length,
+        ofcName: sd.meta.ofcName, checkPeriod: sd.meta.checkPeriod,
+      };
+    });
+    renderDashboard(data);
+    document.getElementById('dash-updated').textContent =
+      `最終更新: ${new Date().toLocaleString('ja-JP')}`;
+    return;
+  }
   try {
     const res = await fetch('/api/dashboard');
     const data = await res.json();
