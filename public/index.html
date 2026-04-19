@@ -443,11 +443,10 @@ header h1 { font-size: 15px; letter-spacing: 1px; }
         <div class="legend-row"><span class="legend-score ls-0">0点</span> 実施×（挨拶なし）</div>
       </div>
       <div class="legend-section">
-        <h4>【おすすめスコア】 各項目〇で＋1点（合計最大3点）</h4>
-        <div class="legend-row"><span class="legend-score ls-max">+1</span> おすすめ実施 〇</div>
+        <h4>【おすすめスコア】 各項目〇で＋1点（合計最大2点）</h4>
         <div class="legend-row"><span class="legend-score ls-max">+1</span> レジカウンターおすすめ 〇</div>
         <div class="legend-row"><span class="legend-score ls-max">+1</span> 店内おすすめ 〇</div>
-        <div class="legend-row" style="margin-top:6px"><strong>総合評価 = 挨拶スコア + おすすめスコア（最大 6点）</strong></div>
+        <div class="legend-row" style="margin-top:6px"><strong>総合評価 = 挨拶スコア + おすすめスコア（最大 5点）</strong></div>
       </div>
     </div>
   </div>
@@ -461,7 +460,7 @@ header h1 { font-size: 15px; letter-spacing: 1px; }
           <th rowspan="2" class="th-base">氏名</th>
           <th colspan="4" class="th-aisatsu">【あいさつ】</th>
           <th rowspan="2" class="th-score">挨拶<br>スコア</th>
-          <th colspan="4" class="th-osusume">【おすすめ】</th>
+          <th colspan="3" class="th-osusume">【おすすめ】</th>
           <th rowspan="2" class="th-score">おすすめ<br>スコア</th>
           <th rowspan="2" class="th-score">総合<br>評価</th>
         </tr>
@@ -470,7 +469,6 @@ header h1 { font-size: 15px; letter-spacing: 1px; }
           <th>②声の大きさ<br>◎大変よい / 〇よい / ×聞こえない</th>
           <th>チェック日</th>
           <th>備考</th>
-          <th class="h-osusume">実施<br>〇/×</th>
           <th class="h-osusume">レジ<br>〇/×</th>
           <th class="h-osusume">店内<br>〇/×</th>
           <th class="h-osusume">チェック日</th>
@@ -486,7 +484,6 @@ header h1 { font-size: 15px; letter-spacing: 1px; }
           <td id="sum-koe">—</td>
           <td colspan="2"></td>
           <td id="sum-ascore">—</td>
-          <td id="sum-osusume">—</td>
           <td id="sum-reji">—</td>
           <td id="sum-tennai">—</td>
           <td></td>
@@ -517,7 +514,6 @@ header h1 { font-size: 15px; letter-spacing: 1px; }
           <th>声◎</th>
           <th>声〇</th>
           <th>おすすめ<br>チェック済</th>
-          <th>おすすめ<br>実施</th>
           <th>レジ<br>実施</th>
           <th>店内<br>実施</th>
         </tr>
@@ -672,11 +668,6 @@ function buildTable() {
       <td><input type="date" id="ad_${i}" onchange="onInput(${i},'aisatsuDate',this.value)"></td>
       <td><input type="text" class="memo" id="am_${i}" placeholder="備考" oninput="onInput(${i},'aisatsuMemo',this.value)"></td>
       <td id="as_${i}"><span class="sb-none">—</span></td>
-      <td><select id="o_${i}" onchange="onSelect(${i},'osusume',this.value)">
-        <option value="">— 選択 —</option>
-        <option value="〇">〇（している）</option>
-        <option value="×">×（していない）</option>
-      </select></td>
       <td><select id="r_${i}" onchange="onSelect(${i},'reji',this.value)">
         <option value="">— 選択 —</option>
         <option value="〇">〇（している）</option>
@@ -696,7 +687,6 @@ function buildTable() {
     // 既存データをセット
     setSelectValue(`a_${i}`, emp.aisatsu);
     setSelectValue(`k_${i}`, emp.koe);
-    setSelectValue(`o_${i}`, emp.osusume);
     setSelectValue(`r_${i}`, emp.reji);
     setSelectValue(`t_${i}`, emp.tennai);
     const adEl = document.getElementById(`ad_${i}`);
@@ -729,7 +719,7 @@ function applySelectColor(el, val) {
 // ===== 入力ハンドラ =====
 function onSelect(idx, field, val) {
   storeData.employees[idx][field] = val;
-  const elMap = { aisatsu:`a_${idx}`, koe:`k_${idx}`, osusume:`o_${idx}`, reji:`r_${idx}`, tennai:`t_${idx}` };
+  const elMap = { aisatsu:`a_${idx}`, koe:`k_${idx}`, reji:`r_${idx}`, tennai:`t_${idx}` };
   const el = document.getElementById(elMap[field]);
   if (el) applySelectColor(el, val);
 
@@ -761,7 +751,7 @@ function updateKoeDisabled(idx, aisatsuVal) {
 // ===== スコア計算 =====
 function calcScore(idx) {
   const emp = storeData.employees[idx];
-  const { aisatsu, koe, osusume, reji, tennai } = emp;
+  const { aisatsu, koe, reji, tennai } = emp;
 
   // 挨拶スコア
   let aScore = null;
@@ -772,11 +762,10 @@ function calcScore(idx) {
     else if (koe === '×') aScore = 1;
   }
 
-  // おすすめスコア
+  // おすすめスコア（レジ・店内のみ、最大2点）
   let oScore = null;
-  if (osusume !== '' || reji !== '' || tennai !== '') {
+  if (reji !== '' || tennai !== '') {
     oScore = 0;
-    if (osusume === '〇') oScore += 1;
     if (reji === '〇') oScore += 1;
     if (tennai === '〇') oScore += 1;
   }
@@ -812,7 +801,7 @@ function updateSummary() {
   const emps = storeData.employees;
   const n = emps.length;
   let sumA=0, sumKoe2=0, sumKoe1=0, sumKoeBatu=0;
-  let sumO=0, sumR=0, sumT=0;
+  let sumR=0, sumT=0;
   let sumAScore=0, sumOScore=0, sumTotal=0;
   let aChecked=0;
 
@@ -821,12 +810,10 @@ function updateSummary() {
     if (emp.koe === '◎') sumKoe2++;
     if (emp.koe === '〇') sumKoe1++;
     if (emp.koe === '×') sumKoeBatu++;
-    if (emp.osusume === '〇') sumO++;
     if (emp.reji === '〇') sumR++;
     if (emp.tennai === '〇') sumT++;
     if (emp.aisatsuDate) aChecked++;
 
-    // スコア集計
     let aScore=0, oScore=0;
     if (emp.aisatsu === '×') aScore=0;
     else if (emp.aisatsu === '〇') {
@@ -834,7 +821,6 @@ function updateSummary() {
       else if (emp.koe === '〇') aScore=2;
       else if (emp.koe === '×') aScore=1;
     }
-    if (emp.osusume === '〇') oScore++;
     if (emp.reji === '〇') oScore++;
     if (emp.tennai === '〇') oScore++;
     sumAScore += aScore;
@@ -845,7 +831,6 @@ function updateSummary() {
   document.getElementById('sum-aisatsu').textContent = `実施〇: ${sumA}人`;
   document.getElementById('sum-koe').textContent = `◎${sumKoe2} / 〇${sumKoe1} / ×${sumKoeBatu}`;
   document.getElementById('sum-ascore').textContent = `平均${n?Math.round(sumAScore/n*10)/10:0}点`;
-  document.getElementById('sum-osusume').textContent = `実施〇: ${sumO}人`;
   document.getElementById('sum-reji').textContent = `レジ〇: ${sumR}人`;
   document.getElementById('sum-tennai').textContent = `店内〇: ${sumT}人`;
   document.getElementById('sum-oscore').textContent = `平均${n?Math.round(sumOScore/n*10)/10:0}点`;
@@ -891,7 +876,7 @@ async function saveEmployee(idx) {
         fields: {
           aisatsu: emp.aisatsu, koe: emp.koe,
           aisatsuDate: emp.aisatsuDate, aisatsuMemo: emp.aisatsuMemo,
-          osusume: emp.osusume, reji: emp.reji, tennai: emp.tennai,
+          reji: emp.reji, tennai: emp.tennai,
           osusumeDate: emp.osusumeDate, osusumeMemo: emp.osusumeMemo
         }
       })
@@ -938,7 +923,6 @@ async function loadDashboard() {
         koeMaru2: emps.filter(e=>e.koe==='◎').length,
         koeMaru1: emps.filter(e=>e.koe==='〇').length,
         osusumeChecked: emps.filter(e=>e.osusumeDate).length,
-        osusumeJisshi: emps.filter(e=>e.osusume==='〇').length,
         reji: emps.filter(e=>e.reji==='〇').length,
         tennai: emps.filter(e=>e.tennai==='〇').length,
         ofcName: sd.meta.ofcName, checkPeriod: sd.meta.checkPeriod,
@@ -988,6 +972,7 @@ function renderDashboard(data) {
         <div class="dash-stat-row"><span class="dash-stat-label">声〇</span><span class="dash-stat-val">${d.koeMaru1}名</span></div>
         <div class="dash-stat-row"><span class="dash-stat-label">おすすめチェック済</span><span class="dash-stat-val">${d.osusumeChecked}名</span></div>
         <div class="dash-stat-row"><span class="dash-stat-label">レジおすすめ実施</span><span class="dash-stat-val">${d.reji}名</span></div>
+
         <div class="dash-stat-row"><span class="dash-stat-label">店内おすすめ実施</span><span class="dash-stat-val">${d.tennai}名</span></div>
       </div>
     `;
@@ -1011,7 +996,6 @@ function renderDashboard(data) {
         <td>${d.koeMaru2}名</td>
         <td>${d.koeMaru1}名</td>
         <td>${d.osusumeChecked}名</td>
-        <td>${d.osusumeJisshi}名</td>
         <td>${d.reji}名</td>
         <td>${d.tennai}名</td>
       </tr>
